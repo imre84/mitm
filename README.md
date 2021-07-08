@@ -26,3 +26,11 @@ The app can be ran from any directory, not just from the same directory.
 the rest should be self-explanatory.
 
 If there is no CACERT present the app will create one on startup. Check the workDir if you want to create a new one for yourself.
+
+Ways to test the app:
+
+    https_proxy=127.0.0.1:8080 wget --ca-certificate=${workDir}/00cacert/cert -t 1 -O /dev/stdout
+
+and
+
+    echo bla|openssl s_client -proxy 127.0.0.1:8080 -connect ${host}:${port} -quiet 2>&1

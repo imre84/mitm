@@ -3,7 +3,7 @@
 
 #include <QTcpServer>
 
-//EXTERNAL CODE Qt creator can make a skeleton class, fyi
+//EXTERNAL CODE Qt creator can make class skeletons, fyi
 class tProxyServerSocket : public QTcpServer
 {
     Q_OBJECT

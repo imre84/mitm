@@ -3,7 +3,7 @@
 
 #include <QSslSocket>
 
-//EXTERNAL CODE Qt creator can make a skeleton class, fyi
+//EXTERNAL CODE Qt creator can make class skeletons, fyi
 class tServersideTcpSocket : public QSslSocket
 {
     Q_OBJECT

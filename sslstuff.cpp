@@ -1,5 +1,3 @@
-//the entirety of this file is EXTERNAL CODE from https://stackoverflow.com/questions/256405/programmatically-create-x509-certificate-using-openssl
-
 #include "sslstuff.h"
 
 #include <openssl/pem.h>
@@ -7,110 +5,127 @@
 #include <QString>
 #include <memory>
 
+#define SSL_CODE(x) do{ x }while(0)
+#define SSL_CHECKRET_PTR(x) SSL_CODE(if(!(x)) return false;)
+#define SSL_CHECKRET_LEN(x) SSL_CODE(if((x)<=0) return false;)
+#define SSL_CHECKRET_INT1(x) SSL_CODE(if((x)!=1) return false;)
+#define SSL_SMARTFILE(varname,qsfn,mode) std::unique_ptr<BIO, void (*)(BIO *)> varname { BIO_new_file((qsfn).toLocal8Bit(), (mode)), BIO_free_all  }; SSL_CHECKRET_PTR(varname)
+#define SSL_SMARTPTR_VAL4(type,varname,val,pfx) std::unique_ptr<type, void (*)(type *)> varname { val, pfx ## _free }; SSL_CHECKRET_PTR(varname)
+#define SSL_SMARTPTR_VAL(type,varname,val) SSL_SMARTPTR_VAL4(type,varname,val,type);
+#define SSL_SMARTPTR_NEW3(type,varname,pfx) SSL_SMARTPTR_VAL4(type,varname,pfx ## _new(),pfx)
+#define SSL_SMARTPTR_NEW(type,varname) SSL_SMARTPTR_NEW3(type,varname,type)
+#define SSL_SMARTPTR_READ(type,varname,file) SSL_SMARTPTR_VAL(type,varname,PEM_read_bio_ ## type(file.get(),nullptr,nullptr,nullptr))
+
+//the following routine is based on EXTERNAL CODE from https://stackoverflow.com/questions/256405/programmatically-create-x509-certificate-using-openssl
 bool generateX509(const QString &certFileName, const QString &keyFileName, long daysValid, unsigned int length_in_bits)
 {
-    std::unique_ptr<BIO, void (*)(BIO *)> certFile  { BIO_new_file(certFileName.toLocal8Bit(), "wb"), BIO_free_all  };
-    if(!certFile) return false;
-    std::unique_ptr<BIO, void (*)(BIO *)> keyFile { BIO_new_file(keyFileName.toLocal8Bit(), "wb"), BIO_free_all };
-    if(!keyFile) return false;
+    SSL_SMARTFILE(certFile,certFileName,"wb");
+    SSL_SMARTFILE(keyFile,keyFileName,"wb");
 
-    std::unique_ptr<RSA, void (*)(RSA *)> rsa { RSA_new(), RSA_free };
-    std::unique_ptr<BIGNUM, void (*)(BIGNUM *)> bn { BN_new(), BN_free };
+    SSL_SMARTPTR_NEW(RSA,rsa);
+    SSL_SMARTPTR_NEW3(BIGNUM,bn,BN);
 
-    BN_set_word(bn.get(), RSA_F4);
-    int rsa_ok = RSA_generate_key_ex(rsa.get(), length_in_bits, bn.get(), nullptr);
-
-    if (rsa_ok != 1) return false;
+    SSL_CHECKRET_INT1(BN_set_word(bn.get(), RSA_F4));
+    SSL_CHECKRET_INT1(RSA_generate_key_ex(rsa.get(), length_in_bits, bn.get(), nullptr));
 
     // --- cert generation ---
-    std::unique_ptr<X509, void (*)(X509 *)> cert { X509_new(), X509_free };
-    std::unique_ptr<EVP_PKEY, void (*)(EVP_PKEY *)> pkey { EVP_PKEY_new(), EVP_PKEY_free};
+    SSL_SMARTPTR_NEW(X509,cert);
+    SSL_SMARTPTR_NEW(EVP_PKEY,pkey);
 
     // The RSA structure will be automatically freed when the EVP_PKEY structure is freed.
-    EVP_PKEY_assign(pkey.get(), EVP_PKEY_RSA, reinterpret_cast<char*>(rsa.release()));
-    ASN1_INTEGER_set(X509_get_serialNumber(cert.get()), 1); // serial number
+    SSL_CHECKRET_INT1(EVP_PKEY_assign(pkey.get(), EVP_PKEY_RSA, reinterpret_cast<char*>(rsa.release())));
+    SSL_CHECKRET_INT1(ASN1_INTEGER_set(X509_get_serialNumber(cert.get()), 1)); // serial number
 
-    X509_gmtime_adj(X509_get_notBefore(cert.get()), 0); // now
-    X509_gmtime_adj(X509_get_notAfter(cert.get()), daysValid * 24 * 60 * 60); // accepts secs
+    SSL_CHECKRET_PTR(X509_gmtime_adj(X509_get_notBefore(cert.get()), 0                       )); // now
+    SSL_CHECKRET_PTR(X509_gmtime_adj(X509_get_notAfter (cert.get()), daysValid * 24 * 60 * 60)); // accepts secs
 
-    X509_set_pubkey(cert.get(), pkey.get());
+    SSL_CHECKRET_INT1(X509_set_pubkey(cert.get(), pkey.get()));
 
     // 1 -- X509_NAME may disambig with wincrypt.h
     // 2 -- DO NO FREE the name internal pointer
     X509_name_st *name = X509_get_subject_name(cert.get());
+    SSL_CHECKRET_PTR(name);
 
-    const uchar country[] = "HU";
-    const uchar company[] = "MyCompany, PLC";
-    const uchar common_name[] = "localhost";
+    static const uchar country[] = "HU";
+    static const uchar company[] = "MyCompany, PLC";
+    static const uchar rootca_cn[] = "root ca";
 
-    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, country    , -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, company    , -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, common_name, -1, -1, 0);
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(name, "C" , MBSTRING_ASC, country  , -1, -1, 0));
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(name, "O" , MBSTRING_ASC, company  , -1, -1, 0));
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, rootca_cn, -1, -1, 0));
 
-    X509_set_issuer_name(cert.get(), name);
-    X509_sign(cert.get(), pkey.get(), EVP_sha256()); // some hash type here
+    SSL_CHECKRET_INT1(X509_set_issuer_name(cert.get(), name));
+    SSL_CHECKRET_LEN(X509_sign(cert.get(), pkey.get(), EVP_sha256())); // some hash type here
 
-    int ret  = PEM_write_bio_PrivateKey(keyFile.get(), pkey.get(), nullptr, nullptr, 0, nullptr, nullptr);
-    int ret2 = PEM_write_bio_X509(certFile.get(), cert.get());
+    SSL_CHECKRET_INT1(PEM_write_bio_PrivateKey(keyFile.get(), pkey.get(), nullptr, nullptr, 0, nullptr, nullptr));
+    SSL_CHECKRET_INT1(PEM_write_bio_X509(certFile.get(), cert.get()));
 
-    return (ret == 1) && (ret2 == 1); // OpenSSL return codes
+    return true;
 }
 
-bool genkey(const QString &cn,const QString &ca,const QString &certFileName, const QString &keyFileName, long daysValid, unsigned int length_in_bits)
+//EXTERNAL CODE: the following routine is partially based on the above function
+bool genkey(const QString &fqdn,const QString &ca,const QString &certFileName, const QString &keyFileName, long daysValid, unsigned int length_in_bits)
 {
-    std::unique_ptr<BIO, void (*)(BIO *)> cacertFile  { BIO_new_file((ca+"/cert").toLocal8Bit(), "r"), BIO_free_all  };
-    if(!cacertFile) return false;
-    std::unique_ptr<BIO, void (*)(BIO *)> cakeyFile { BIO_new_file((ca+"/key").toLocal8Bit(), "r"), BIO_free_all };
-    if(!cakeyFile) return false;
-    std::unique_ptr<BIO, void (*)(BIO *)> certFile  { BIO_new_file(certFileName.toLocal8Bit(), "wb"), BIO_free_all  };
-    if(!certFile) return false;
-    std::unique_ptr<BIO, void (*)(BIO *)> keyFile { BIO_new_file(keyFileName.toLocal8Bit(), "wb"), BIO_free_all };
-    if(!keyFile) return false;
+    SSL_SMARTFILE(cacertFile,ca+"/cert","r");
+    SSL_SMARTFILE(cakeyFile,ca+"/key","r");
+    SSL_SMARTFILE(certFile,certFileName,"wb");
+    SSL_SMARTFILE(keyFile,keyFileName,"wb");
 
-    std::unique_ptr<RSA, void (*)(RSA *)> rsa { RSA_new(), RSA_free };
-    std::unique_ptr<BIGNUM, void (*)(BIGNUM *)> bn { BN_new(), BN_free };
+    SSL_SMARTPTR_NEW(RSA,rsa);
+    SSL_SMARTPTR_NEW3(BIGNUM,bn,BN);
 
-    BN_set_word(bn.get(), RSA_F4);
-    int rsa_ok = RSA_generate_key_ex(rsa.get(), length_in_bits, bn.get(), nullptr);
-
-    if (rsa_ok != 1) return false;
+    SSL_CHECKRET_INT1(BN_set_word(bn.get(), RSA_F4));
+    SSL_CHECKRET_INT1(RSA_generate_key_ex(rsa.get(), length_in_bits, bn.get(), nullptr));
 
     // --- reading cacert from disk ---
-    std::unique_ptr<X509, void (*)(X509 *)> cacert { PEM_read_bio_X509(cacertFile.get(),nullptr,nullptr,nullptr), X509_free };
+    SSL_SMARTPTR_READ(X509,cacert,cacertFile);
 
     // --- reading cakey from disk ---
-    std::unique_ptr<EVP_PKEY, void (*)(EVP_PKEY *)> capkey { PEM_read_bio_PrivateKey(cakeyFile.get(),nullptr,nullptr,nullptr), EVP_PKEY_free};
+    SSL_SMARTPTR_VAL(EVP_PKEY,capkey,PEM_read_bio_PrivateKey(cakeyFile.get(),nullptr,nullptr,nullptr));
+
+    // --- csr generation ---
+    //EXTERNAL CODE from https://www.dynamsoft.com/codepool/how-to-use-openssl-to-generate-x-509-certificate-request.html
+
+    SSL_SMARTPTR_NEW(X509_REQ,x509_req);
+    SSL_CHECKRET_INT1(X509_REQ_set_version(x509_req.get(), 1));
+    X509_name_st *x509_name = X509_REQ_get_subject_name(x509_req.get());
+    SSL_CHECKRET_PTR(x509_name);
+
+    static const uchar country[] = "HU";
+    static const uchar province[] = "Budapest";
+    static const uchar city[] = "Budapest";
+    static const uchar company[] = "MyCompany, PLC";
+    static const uchar rootca_cn[] = "root ca";
+           const uchar *cn = reinterpret_cast<const uchar *>(fqdn.toLocal8Bit().constData());
+
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(x509_name, "C" , MBSTRING_ASC, country , -1, -1, 0));
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(x509_name, "ST", MBSTRING_ASC, province, -1, -1, 0));
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(x509_name, "L" , MBSTRING_ASC, city    , -1, -1, 0));
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(x509_name, "O" , MBSTRING_ASC, company , -1, -1, 0));
+    SSL_CHECKRET_INT1(X509_NAME_add_entry_by_txt(x509_name, "CN", MBSTRING_ASC, cn      , -1, -1, 0));
+
+    // 4. set public key of x509 req
+    SSL_SMARTPTR_NEW(EVP_PKEY,pKey);
+    SSL_CHECKRET_INT1(EVP_PKEY_assign_RSA(pKey.get(), rsa.release()));
+    // 5. set sign key of x509 req
+    SSL_CHECKRET_LEN(X509_REQ_sign(x509_req.get(),pKey.get(),EVP_sha256()));
+
+    //EXTERNAL CODE https://stackoverflow.com/questions/26658846/c-code-for-ceating-x509-certificate-and-verify-it
 
     // --- cert generation ---
-    std::unique_ptr<X509, void (*)(X509 *)> cert { X509_new(), X509_free };
-    std::unique_ptr<EVP_PKEY, void (*)(EVP_PKEY *)> pkey { EVP_PKEY_new(), EVP_PKEY_free};
+    SSL_SMARTPTR_NEW(X509,m_req_reply);
+    SSL_CHECKRET_INT1(ASN1_INTEGER_set(X509_get_serialNumber(m_req_reply.get()), 2));
+    SSL_CHECKRET_PTR(X509_gmtime_adj(X509_get_notBefore(m_req_reply.get()), 0                       )); // now
+    SSL_CHECKRET_PTR(X509_gmtime_adj(X509_get_notAfter (m_req_reply.get()), daysValid * 24 * 60 * 60)); // accepts secs
+    SSL_CHECKRET_INT1(X509_set_pubkey(m_req_reply.get(), pKey.get()));
+    X509_NAME *issuerSubject = X509_get_subject_name(cacert.get());
+    SSL_CHECKRET_PTR(issuerSubject);
+    SSL_CHECKRET_INT1(X509_set_issuer_name(m_req_reply.get(), issuerSubject));
+    X509_set_subject_name(m_req_reply.get(), x509_name);
+    SSL_CHECKRET_LEN(X509_sign(m_req_reply.get(),capkey.get(),EVP_sha256()));
 
-    // The RSA structure will be automatically freed when the EVP_PKEY structure is freed.
-    EVP_PKEY_assign(pkey.get(), EVP_PKEY_RSA, reinterpret_cast<char*>(rsa.release()));
-    ASN1_INTEGER_set(X509_get_serialNumber(cert.get()), 1); // serial number
+    SSL_CHECKRET_INT1(PEM_write_bio_PrivateKey(keyFile.get(), pKey.get(), nullptr, nullptr, 0, nullptr, nullptr));
+    SSL_CHECKRET_INT1(PEM_write_bio_X509(certFile.get(),m_req_reply.get()));
 
-    X509_gmtime_adj(X509_get_notBefore(cert.get()), 0); // now
-    X509_gmtime_adj(X509_get_notAfter(cert.get()), daysValid * 24 * 60 * 60); // accepts secs
-
-    X509_set_pubkey(cert.get(), pkey.get());
-
-    // 1 -- X509_NAME may disambig with wincrypt.h
-    // 2 -- DO NO FREE the name internal pointer
-    X509_name_st *name = X509_get_subject_name(cert.get());
-
-    const uchar country[] = "HU";
-    const uchar company[] = "MyCompany, PLC";
-    const uchar *common_name = reinterpret_cast<const uchar *>(cn.toUtf8().constData());
-
-    X509_NAME_add_entry_by_txt(name, "C",  MBSTRING_ASC, country    , -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "O",  MBSTRING_ASC, company    , -1, -1, 0);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, common_name, -1, -1, 0);
-
-    X509_set_issuer_name(cacert.get(), name);
-    X509_sign(cert.get(), capkey.get(), EVP_sha256()); // some hash type here
-
-    int ret  = PEM_write_bio_PrivateKey(keyFile.get(), pkey.get(), nullptr, nullptr, 0, nullptr, nullptr);
-    int ret2 = PEM_write_bio_X509(certFile.get(), cert.get());
-
-    return (ret == 1) && (ret2 == 1); // OpenSSL return codes
+    return true;
 }
