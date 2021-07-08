@@ -3,7 +3,7 @@
 
 #include <QSslSocket>
 
-tProxyServerSocket::tProxyServerSocket(QObject *parent) : QTcpServer(parent)
+tProxyServerSocket::tProxyServerSocket(const QString &workdir, const QString &cadir, QObject *parent) : QTcpServer(parent),m_workdir(workdir),m_cadir(cadir)
 {
     connect(this,&QTcpServer::newConnection,this,&tProxyServerSocket::onNewConnection);
 }
@@ -20,7 +20,7 @@ void tProxyServerSocket::onNewConnection()
 
 void tProxyServerSocket::incomingConnection(qintptr handle)
 {
-    QSslSocket *sock=new tServersideTcpSocket(this);
+    QSslSocket *sock=new tServersideTcpSocket(m_workdir, m_cadir, this);
     sock->setSocketDescriptor(handle);
     addPendingConnection(sock);
 }

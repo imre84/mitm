@@ -36,6 +36,7 @@ add_executable(mitm
   proxyserversocket.cpp
   serversidetcpsocket.cpp
   sslstuff.cpp
+  mystdio.cpp
   ${TS_FILES}
 )
 target_link_libraries(mitm PUBLIC OpenSSL::SSL OpenSSL::Crypto Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::Network)

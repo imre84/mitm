@@ -8,13 +8,16 @@ class tProxyServerSocket : public QTcpServer
 {
     Q_OBJECT
 public:
-    explicit tProxyServerSocket(QObject *parent = nullptr);
+    explicit tProxyServerSocket(const QString &workdir, const QString &cadir, QObject *parent = nullptr);
 
 private slots:
     void onNewConnection();
 
 protected:
     virtual void incomingConnection(qintptr handle) override;
+
+private:
+    const QString m_workdir, m_cadir;
 };
 
 #endif // INCLUDED_PROXYSERVERSOCKET_H

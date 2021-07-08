@@ -17,12 +17,12 @@ apart from that, this is a well-behaving cmake project, if you have qt dev libra
 
 ## running
 
-you can start the app without any parameters, in this case the app will start with the settings saved previously. In the apsence of previous settings the default listen address is 127.0.0.1:8080
+To get help you can issue
 
-you can change the listen address by starting the executable like this:
+    ./mitm help
 
-    ./mitm 0.0.0.0 3128
+The app can be ran from any directory, not just from the same directory.
 
-in which case the new settings are applied and saved into the settings.
+the rest should be self-explanatory.
 
-If there is no CACERT present the app will create one on startup. check the CA directory if you want to create a new one for yourself.
+If there is no CACERT present the app will create one on startup. Check the workDir if you want to create a new one for yourself.
