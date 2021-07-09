@@ -7,6 +7,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QTextStream>
+#include <QDirIterator>
 
 #include "proxyserversocket.h"
 #include "sslstuff.h"
@@ -156,7 +157,16 @@ int main(int argc, char *argv[])
         }
     }
 
-    tProxyServerSocket sock(workdir,cadir);
+    long serial=0;
+    //EXTERNAL CODE from https://doc.qt.io/qt-5/qdiriterator.html
+    QDirIterator it(workdir,{"cert"}, QDir::NoFilter, QDirIterator::Subdirectories);
+    while(it.hasNext())
+    {
+        it.next();
+        ++serial;
+    }
+
+    tProxyServerSocket sock(workdir,cadir,serial);
     const bool listenSucceeded=sock.listen(listenAddress,listenPort);
     if(!listenSucceeded)
     {

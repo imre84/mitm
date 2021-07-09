@@ -2,6 +2,7 @@
 #include "sslstuff.h"
 #include "mystdio.h"
 #include "qthelper.h"
+#include "proxyserversocket.h"
 
 #include <QFileInfo>
 #include <QDir>
@@ -102,7 +103,10 @@ void tServersideTcpSocket::clientsideEncrypted()
     }
 
     if(!QFileInfo::exists(curdir+"/cert"))
-        genkey(m_host,m_cadir,curdir+"/cert",curdir+"/key");
+    {
+        long serial=static_cast<tProxyServerSocket *>(parent())->getSerial();
+        genkey(m_host,m_cadir,curdir+"/cert",curdir+"/key",serial);
+    }
 
     this->setPrivateKey(curdir+"/key");
     QList<QSslCertificate> chain;

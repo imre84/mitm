@@ -64,7 +64,7 @@ bool generateX509(const QString &certFileName, const QString &keyFileName, long 
 }
 
 //EXTERNAL CODE: the following routine is partially based on the above function
-bool genkey(const QString &fqdn,const QString &ca,const QString &certFileName, const QString &keyFileName, long daysValid, unsigned int length_in_bits)
+bool genkey(const QString &fqdn,const QString &ca,const QString &certFileName, const QString &keyFileName, long serial, long daysValid, unsigned int length_in_bits)
 {
     SSL_SMARTFILE(cacertFile,ca+"/cert","r");
     SSL_SMARTFILE(cakeyFile,ca+"/key","r");
@@ -115,7 +115,7 @@ bool genkey(const QString &fqdn,const QString &ca,const QString &certFileName, c
 
     // --- cert generation ---
     SSL_SMARTPTR_NEW(X509,m_req_reply);
-    SSL_CHECKRET_INT1(ASN1_INTEGER_set(X509_get_serialNumber(m_req_reply.get()), 2));
+    SSL_CHECKRET_INT1(ASN1_INTEGER_set(X509_get_serialNumber(m_req_reply.get()), serial));
     SSL_CHECKRET_PTR(X509_gmtime_adj(X509_get_notBefore(m_req_reply.get()), 0                       )); // now
     SSL_CHECKRET_PTR(X509_gmtime_adj(X509_get_notAfter (m_req_reply.get()), daysValid * 24 * 60 * 60)); // accepts secs
     SSL_CHECKRET_INT1(X509_set_pubkey(m_req_reply.get(), pKey.get()));

@@ -3,9 +3,14 @@
 
 #include <QSslSocket>
 
-tProxyServerSocket::tProxyServerSocket(const QString &workdir, const QString &cadir, QObject *parent) : QTcpServer(parent),m_workdir(workdir),m_cadir(cadir)
+tProxyServerSocket::tProxyServerSocket(const QString &workdir, const QString &cadir, long serial, QObject *parent) : QTcpServer(parent),m_workdir(workdir),m_cadir(cadir),m_serial(serial)
 {
     connect(this,&QTcpServer::newConnection,this,&tProxyServerSocket::onNewConnection);
+}
+
+long tProxyServerSocket::getSerial()
+{
+    return ++m_serial;
 }
 
 void tProxyServerSocket::onNewConnection()
