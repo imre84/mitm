@@ -109,6 +109,7 @@ bool genkey(const QString &fqdn,const QString &ca,const QString &certFileName, c
     SSL_CHECKRET_INT1(EVP_PKEY_assign_RSA(pKey.get(), rsa.release()));
     // 5. set sign key of x509 req
     SSL_CHECKRET_LEN(X509_REQ_sign(x509_req.get(),pKey.get(),EVP_sha256()));
+    //todo the x509_req isn't used, it could just be omitted
 
     //EXTERNAL CODE https://stackoverflow.com/questions/26658846/c-code-for-ceating-x509-certificate-and-verify-it
 

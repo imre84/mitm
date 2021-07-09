@@ -15,7 +15,7 @@ tServersideTcpSocket::~tServersideTcpSocket()
 {
     if(m_port)
     {
-        qDebug()<<"Socket to "<<m_host<<':'<<m_port<<" gets closed";
+        qCritical()<<"Socket to "<<m_host<<':'<<m_port<<" gets closed";
     }
 }
 
@@ -48,7 +48,7 @@ void tServersideTcpSocket::cleartextReadyRead()
     ERRORIF(!xport);
     ERRORIF(xport>=65536);
     m_port=xport;
-    qDebug()<<"Initializing CONNECTion to "<<m_host<<':'<<m_port;
+    qCritical()<<"Initializing CONNECTion to "<<m_host<<':'<<m_port;
     disconnect(this        , &QIODevice::readyRead                                           , this, &tServersideTcpSocket::cleartextReadyRead );
     m_clientSide=new QSslSocket(this);
        connect(m_clientSide, &QAbstractSocket::connected                                     , this, &tServersideTcpSocket::clientConnected    );
@@ -71,7 +71,7 @@ void tServersideTcpSocket::cleartextReadyRead()
 
 void tServersideTcpSocket::clientConnected()
 {
-    qDebug()<<"Downstream TCP connection for "<<m_host<<':'<<m_port<<" is ready, initiating downstream SSL handshake";
+    qCritical()<<"Downstream TCP connection for "<<m_host<<':'<<m_port<<" is ready, initiating downstream SSL handshake";
     disconnect(m_clientSide, &QAbstractSocket::connected                                     , this, &tServersideTcpSocket::clientConnected    );
        connect(m_clientSide, &QSslSocket::encrypted                                          , this, &tServersideTcpSocket::clientsideEncrypted);
     m_clientSide->startClientEncryption();
@@ -87,7 +87,7 @@ QByteArray contents(const QString &fn)
 
 void tServersideTcpSocket::clientsideEncrypted()
 {
-    qDebug()<<"Downstream TCP connection for "<<m_host<<':'<<m_port<<" is now ssl encrypted, initiating upstream SSL handshake";
+    qCritical()<<"Downstream TCP connection for "<<m_host<<':'<<m_port<<" is now ssl encrypted, initiating upstream SSL handshake";
     disconnect(m_clientSide, &QSslSocket::encrypted                                          , this, &tServersideTcpSocket::clientsideEncrypted);
        connect(this        , &QSslSocket::encrypted                                          , this, &tServersideTcpSocket::serversideEncrypted);
     QStringList w=m_host.split('.');
@@ -116,7 +116,7 @@ void tServersideTcpSocket::clientsideEncrypted()
 
 void tServersideTcpSocket::serversideEncrypted()
 {
-    qDebug()<<"Upstream TCP connection for "<<m_host<<':'<<m_port<<" is now encrypted";
+    qCritical()<<"Upstream TCP connection for "<<m_host<<':'<<m_port<<" is now encrypted";
     disconnect(this        , &QSslSocket::encrypted                                          , this, &tServersideTcpSocket::serversideEncrypted);
        connect(this        , &QIODevice::readyRead                                           , this, &tServersideTcpSocket::sslDataReceived    );
        connect(m_clientSide, &QIODevice::readyRead                                           , this, &tServersideTcpSocket::sslDataReceived    );
@@ -138,9 +138,9 @@ void tServersideTcpSocket::onError(QAbstractSocket::SocketError socketError)
         return;
 
     if(m_port>0)
-        qDebug()<<"Socket error for "<<m_host<<':'<<m_port<<" "<<enumToString(socketError)<<errorString();
+        qCritical()<<"Socket error for "<<m_host<<':'<<m_port<<" "<<enumToString(socketError)<<errorString();
     else
-        qDebug()<<"Socket error "                              <<enumToString(socketError)<<errorString();
+        qCritical()<<"Socket error "                              <<enumToString(socketError)<<errorString();
 
     deleteLater();
 }
@@ -160,7 +160,7 @@ void tServersideTcpSocket::sslDataReceived1(QObject *sndr)
 void tServersideTcpSocket::sslDataReceived2(QSslSocket &from, QSslSocket &to)
 {
     QByteArray buf=from.readAll();
-    qDebug()<<buf;
+    qCritical()<<buf;
 
     to.write(buf);
 }
