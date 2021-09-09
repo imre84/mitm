@@ -1,4 +1,6 @@
 #include "mystdio.h"
+#include <QVariant>
+#include <QTextStream>
 
 QTextStream &operator<<(QTextStream &a,const QVariant &b)
 {

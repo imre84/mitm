@@ -16,6 +16,9 @@
 #define SSL_SMARTPTR_NEW(type,varname) SSL_SMARTPTR_NEW3(type,varname,type)
 #define SSL_SMARTPTR_READ(type,varname,file) SSL_SMARTPTR_VAL(type,varname,PEM_read_bio_ ## type(file.get(),nullptr,nullptr,nullptr))
 
+BIGNUM *BIGNUM_new() { return BN_new(); }
+void BIGNUM_free(BIGNUM *ptr) { return BN_free(ptr); }
+
 //the following routine is based on EXTERNAL CODE from https://stackoverflow.com/questions/256405/programmatically-create-x509-certificate-using-openssl
 bool generateX509(const QString &certFileName, const QString &keyFileName, long daysValid, unsigned int length_in_bits)
 {
@@ -23,7 +26,7 @@ bool generateX509(const QString &certFileName, const QString &keyFileName, long 
     SSL_SMARTFILE(keyFile,keyFileName,"wb");
 
     SSL_SMARTPTR_NEW(RSA,rsa);
-    SSL_SMARTPTR_NEW3(BIGNUM,bn,BN);
+    SSL_SMARTPTR_NEW(BIGNUM,bn);
 
     SSL_CHECKRET_INT1(BN_set_word(bn.get(), RSA_F4));
     SSL_CHECKRET_INT1(RSA_generate_key_ex(rsa.get(), length_in_bits, bn.get(), nullptr));

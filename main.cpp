@@ -12,6 +12,7 @@
 #include "proxyserversocket.h"
 #include "sslstuff.h"
 #include "mystdio.h"
+#include "qthelper.h"
 
 void helpme(char *appname0)
 {
@@ -50,10 +51,8 @@ int main(int argc, char *argv[])
                                                  {"workDir",QDir::toNativeSeparators(SRCDIR "/certs")},
                                                 };
 
-    for(QMap<QString,QString>::const_iterator it=defaultSettings.cbegin();it!=defaultSettings.cend();++it)
+    for(auto [key,value]:asKeyValueRange(defaultSettings))
     {
-        const QString &key=it.key();
-        const QString &value=it.value();
         if(!settings.contains(key))
             settings.setValue(key,value);
     }
