@@ -8,6 +8,6 @@ QTextStream &operator<<(QTextStream &a,const QVariant &b);
 extern QTextStream cin;
 extern QTextStream cerr;
 extern QTextStream cout;
-#define endl Qt::endl
+using Qt::endl;
 
 #endif // INCLUDED_MYSTDIO_H
